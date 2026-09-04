@@ -38,7 +38,7 @@ label:not(.check) { display: block; margin: 14px 0 5px; color: #d8dfe3; font-wei
 .check { display: block; margin: 9px 0; cursor: pointer; }
 .check input { width: 16px; height: 16px; margin: 0 8px 0 0; vertical-align: -3px; accent-color: #1684c7; }
 
-input[type="text"], input[type="number"], select {
+input[type="text"], input[type="email"], input[type="password"], input[type="number"], select {
   min-height: 36px;
   border: 1px solid #4b5962;
   border-radius: 4px;
@@ -47,12 +47,24 @@ input[type="text"], input[type="number"], select {
   padding: 7px 9px;
 }
 
-input[type="text"], select { width: min(460px, 100%); }
+input[type="text"], input[type="email"], input[type="password"], select { width: min(460px, 100%); }
 input[type="number"] { width: 125px; }
 .inline { display: flex; align-items: center; gap: 8px; color: #aeb9c0; }
 .help { max-width: 630px; margin: 6px 0 0; color: #9ba8b0; font-size: 12px; }
 .help.warning { color: #e8bd72; }
 code { color: #9edbfa; }
+
+.connection-panel {
+  max-width: 650px;
+  margin-top: 10px;
+  padding: 11px 13px;
+  border: 1px solid #39444c;
+  border-radius: 5px;
+  background: rgba(9, 14, 18, .32);
+}
+.connection-panel[hidden] { display: none; }
+.button-row { display: flex; flex-wrap: wrap; gap: 9px; }
+.button-row .secondary { margin-top: 12px; }
 
 .appearance-grid {
   display: grid;

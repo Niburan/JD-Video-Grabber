@@ -11,6 +11,7 @@ JD Video Grabber watches video activity in Firefox, puts an IDM-inspired **Downl
 - Extensionless media responses identified by their HTTP content type
 - Video URLs exposed by `<video>` / `<source>` elements and the browser resource timeline
 - Pages that use `blob:` / MediaSource playback, using the page URL as a JDownloader fallback
+- Local Click'n'Load, direct server addresses, and encrypted MyJDownloader account connections
 
 Detection is deliberately layered because no single Firefox API sees every player. Tiny HLS/DASH segments are filtered out so LinkGrabber is not flooded with hundreds of fragments.
 
@@ -47,11 +48,17 @@ Duration comes from the active player, while HLS resolution and bitrate come fro
 
 Temporary extensions remain installed until Firefox restarts. A permanently installable release must be signed through Mozilla Add-ons.
 
-## Confirm JDownloader connectivity
+## Choose how to reach JDownloader
 
 JDownloader normally exposes Click'n'Load at `http://127.0.0.1:9666`. Open the extension toolbar panel or its Settings page and use **Test JDownloader connection**.
 
-To use JDownloader on another computer, enable **Connect to JDownloader on another computer** and enter its address. The field accepts LAN, VPN, WAN, or public IP addresses and hostnames, with or without the `http://` prefix. Examples:
+The Settings page offers three connection types:
+
+- **Local JDownloader** — uses Click'n'Load on this computer at `127.0.0.1:9666`.
+- **Direct server address** — connects to Click'n'Load on another computer by LAN, VPN, WAN, hostname, or public IP address.
+- **MyJDownloader account** — uses the official encrypted MyJDownloader API and a selected device attached to the account.
+
+For a direct server connection, the address can be entered with or without the `http://` prefix. Examples:
 
 - `192.168.1.50:9666`
 - `100.80.20.10:9666`
@@ -59,6 +66,8 @@ To use JDownloader on another computer, enable **Connect to JDownloader on anoth
 - `https://downloads.example.com`
 
 The remote computer must expose its Click'n'Load service at that address and allow the connection through its firewall. Remote mode is deliberately opt-in. Avoid exposing port 9666 directly to the public internet; a VPN or an authenticated HTTPS reverse proxy is safer. Public HTTP sends the submitted video URLs without transport encryption.
+
+For MyJDownloader, first sign in to the same account inside the remote JDownloader application. Then select **MyJDownloader account** in the extension, enter the account email and password, choose an online device, and test the connection. This route normally requires no incoming port, router forwarding, public IP, or VPN. The password is used only to derive the encrypted API session and is not saved in extension settings. The temporary session ends when the browser is restarted.
 
 When the first link is sent, JDownloader may ask whether to allow an external application to add links. Accept that prompt. By default, links go to **LinkGrabber**. Settings can instead start them immediately.
 
@@ -86,7 +95,7 @@ This is the anchor-based filename rule documented by JDownloader. It affects onl
 - Players inside a closed Shadow DOM may be detected by network activity but may not allow a bar to be positioned directly over the hidden `<video>` element. The toolbar panel still lists the stream.
 - JDownloader must support the site or media format it receives.
 
-Only URLs selected by the user are sent, and only to the user-configured JDownloader endpoint. Remote access is disabled by default. The extension contains no analytics or developer-operated remote service.
+Only URLs selected by the user are sent. Local and direct modes send them only to the user-configured JDownloader endpoint. MyJDownloader mode sends the account email and encrypted authentication messages to `https://api.jdownloader.org`, then sends the selected URL and page title through that service to the chosen device. The password is not stored or sent directly. The extension contains no analytics, remote code, or developer-operated relay service.
 
 ## Developer commands
 
@@ -95,4 +104,4 @@ npm test
 npm run build
 ```
 
-The build command creates `dist/jd-video-grabber-1.1.0.zip` and an identical unsigned `.xpi` for temporary installation/testing.
+The build command creates `dist/jd-video-grabber-1.2.0.zip` and an identical unsigned `.xpi` for temporary installation/testing.

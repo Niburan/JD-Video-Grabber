@@ -4,7 +4,7 @@ This Chromium package provides the same video detection, IDM-inspired download b
 
 ## Install for testing
 
-1. Extract `jd-video-grabber-chrome-brave-1.1.0.zip` to a permanent folder.
+1. Extract `jd-video-grabber-chrome-brave-1.2.0.zip` to a permanent folder.
 2. Start JDownloader 2.
 3. Open `chrome://extensions` in Chrome or `brave://extensions` in Brave.
 4. Enable **Developer mode**.
@@ -17,9 +17,13 @@ Chrome and Brave cannot load the ZIP directly through **Load unpacked**; extract
 
 The default Click'n'Load endpoint is `http://127.0.0.1:9666`. Existing Packagizer rules used with the Firefox version can remain unchanged.
 
-To use JDownloader on another computer, open Settings, enable **Connect to JDownloader on another computer**, and enter a LAN, VPN, WAN, or public IP address or hostname. Bare addresses such as `192.168.1.50:9666` are accepted and normalized automatically. The remote computer must expose Click'n'Load and allow the connection through its firewall.
+Settings provides three connection types: Local JDownloader, Direct server address, and MyJDownloader account.
+
+For a direct server connection, enter a LAN, VPN, WAN, or public IP address or hostname. Bare addresses such as `192.168.1.50:9666` are accepted and normalized automatically. The remote computer must expose Click'n'Load and allow the connection through its firewall.
 
 Remote mode is opt-in. A VPN or authenticated HTTPS reverse proxy is safer than exposing port 9666 directly to the public internet. Public HTTP sends submitted video URLs without transport encryption.
+
+For MyJDownloader, sign in to the same MyJDownloader account inside the remote JDownloader application. Select **MyJDownloader account** in the extension, sign in, and choose the target device. This encrypted API route normally needs no open incoming port, router forwarding, public IP, or VPN. The password is not saved in extension settings; sign in again after restarting the browser.
 
 ## Limits
 
@@ -28,3 +32,4 @@ Remote mode is opt-in. A VPN or authenticated HTTPS reverse proxy is safer than 
 - Some authenticated media requires cookies or headers that Click'n'Load cannot transfer.
 - Browser-extension service workers can be suspended between events; detected state is restored from extension session storage.
 - The extension contains no analytics or remote code.
+- MyJDownloader mode sends the account email and encrypted authentication messages to `https://api.jdownloader.org`, then sends the selected video URL and page title through that service to the chosen device. The password is not stored or sent directly.

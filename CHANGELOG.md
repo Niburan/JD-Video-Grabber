@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.2.0-beta.1
+
+- Added MyJDownloader as a third connection mode alongside Local and Direct server
+- Added encrypted MyJDownloader authentication using the browser's built-in Web Crypto API
+- Added online-device discovery, device selection, connection testing, and LinkGrabber submission
+- Keeps the MyJDownloader password out of saved extension settings
+- Stores API session material only in extension session storage and requires sign-in again after a browser restart
+- Added explicit MyJDownloader privacy and testing guidance
+- Added a repository privacy policy covering all three connection modes
+- Preserved direct LAN, VPN, WAN, hostname, public-IP, and HTTPS reverse-proxy support
+
 ## v1.1.0-beta.1
 
 - Added opt-in remote JDownloader server access

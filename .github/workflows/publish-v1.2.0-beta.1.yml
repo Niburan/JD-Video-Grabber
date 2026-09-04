@@ -1,0 +1,58 @@
+name: Publish v1.2.0-beta.1
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/release-v1.2.0-beta.1
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Package beta builds
+        run: |
+          (cd firefox && zip -qr ../jd-video-grabber-firefox-server-access-1.2.0-beta.1.zip .)
+          cp jd-video-grabber-firefox-server-access-1.2.0-beta.1.zip \
+            jd-video-grabber-firefox-server-access-1.2.0-beta.1-UNSIGNED.xpi
+          (cd chromium && zip -qr ../jd-video-grabber-chrome-brave-server-access-1.2.0-beta.1.zip .)
+          sha256sum \
+            jd-video-grabber-firefox-server-access-1.2.0-beta.1.zip \
+            jd-video-grabber-firefox-server-access-1.2.0-beta.1-UNSIGNED.xpi \
+            jd-video-grabber-chrome-brave-server-access-1.2.0-beta.1.zip \
+            > SHA256SUMS.txt
+
+      - name: Create or update GitHub prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view v1.2.0-beta.1 >/dev/null 2>&1; then
+            gh release edit v1.2.0-beta.1 \
+              --title "JD Video Grabber v1.2.0-beta.1 — MyJDownloader Server Access" \
+              --notes-file RELEASE_NOTES_1.2.0-beta.1.md \
+              --prerelease
+            gh release upload v1.2.0-beta.1 \
+              jd-video-grabber-firefox-server-access-1.2.0-beta.1.zip \
+              jd-video-grabber-firefox-server-access-1.2.0-beta.1-UNSIGNED.xpi \
+              jd-video-grabber-chrome-brave-server-access-1.2.0-beta.1.zip \
+              SHA256SUMS.txt \
+              --clobber
+          else
+            gh release create v1.2.0-beta.1 \
+              jd-video-grabber-firefox-server-access-1.2.0-beta.1.zip \
+              jd-video-grabber-firefox-server-access-1.2.0-beta.1-UNSIGNED.xpi \
+              jd-video-grabber-chrome-brave-server-access-1.2.0-beta.1.zip \
+              SHA256SUMS.txt \
+              --target "$GITHUB_SHA" \
+              --title "JD Video Grabber v1.2.0-beta.1 — MyJDownloader Server Access" \
+              --notes-file RELEASE_NOTES_1.2.0-beta.1.md \
+              --prerelease
+          fi

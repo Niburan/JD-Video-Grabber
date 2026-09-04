@@ -89,12 +89,43 @@
         <label class="check"><input id="usePageTitleFilename" type="checkbox"> Add the page title as a filename hint</label>
         <p class="help">The filename hint requires the one-time JDownloader Packagizer rule described in the included README. Package names use the page title even without that rule.</p>
 
-        <label class="check"><input id="allowRemoteJDownloader" type="checkbox"> Connect to JDownloader on another computer</label>
-        <p class="help warning">Only enable remote access for a JDownloader server you trust. Public HTTP connections expose submitted video URLs unencrypted.</p>
+        <label for="connectionMode">Connection type</label>
+        <select id="connectionMode">
+          <option value="local">Local JDownloader (this computer)</option>
+          <option value="direct">Direct server address (LAN, VPN, or WAN)</option>
+          <option value="myjd">MyJDownloader account</option>
+        </select>
 
-        <label for="jdEndpoint">JDownloader address</label>
-        <input id="jdEndpoint" type="text" spellcheck="false" placeholder="127.0.0.1:9666">
-        <p id="endpoint-help" class="help">Local mode accepts only <code>127.0.0.1:9666</code> or <code>localhost:9666</code>.</p>
+        <div id="local-connection-panel" class="connection-panel">
+          <p class="help">Connects to Click'n'Load at <code>http://127.0.0.1:9666</code>.</p>
+        </div>
+
+        <div id="direct-connection-panel" class="connection-panel" hidden>
+          <p class="help warning">Only connect directly to a JDownloader server you trust. Public HTTP exposes submitted video URLs without transport encryption.</p>
+          <label for="jdEndpoint">JDownloader server address</label>
+          <input id="jdEndpoint" type="text" spellcheck="false" placeholder="192.168.1.50:9666">
+          <p id="endpoint-help" class="help">Accepts LAN, VPN, WAN, or public IP addresses and hostnames over HTTP or HTTPS.</p>
+        </div>
+
+        <div id="myjd-connection-panel" class="connection-panel" hidden>
+          <p class="help">Uses the official MyJDownloader API, so no incoming port or VPN connection is required. The selected video URL and page title pass through MyJDownloader's encrypted service.</p>
+          <label for="myjdEmail">MyJDownloader email</label>
+          <input id="myjdEmail" type="email" autocomplete="username" spellcheck="false" placeholder="name@example.com">
+          <label for="myjdPassword">MyJDownloader password</label>
+          <input id="myjdPassword" type="password" autocomplete="current-password" placeholder="Password">
+          <p class="help warning">The password is used only to establish the encrypted session and is not saved in extension settings. Sign in again after restarting the browser.</p>
+          <div class="button-row">
+            <button id="myjd-connect" class="secondary" type="button">Sign in and find devices</button>
+            <button id="myjd-disconnect" class="secondary" type="button">Forget session</button>
+          </div>
+          <label for="myjdDeviceId">Target JDownloader device</label>
+          <select id="myjdDeviceId" disabled>
+            <option value="">Sign in to load devices</option>
+          </select>
+          <input id="myjdDeviceName" type="hidden">
+          <p id="myjd-result" class="result" role="status"></p>
+        </div>
+
         <button id="test-connection" class="secondary" type="button">Test JDownloader connection</button>
         <p id="connection-result" class="result" role="status"></p>
       </section>

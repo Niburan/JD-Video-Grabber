@@ -91,9 +91,18 @@ async function initialize() {
 
   if (stateResponse?.state) renderState(stateResponse.state);
   const connected = connectionResponse?.connected === true;
-  elements.connection.textContent = connected ? "JDownloader 2 is connected" : "JDownloader 2 is not reachable";
+  const myjdNeedsSignIn = connectionResponse?.mode === "myjd" && connectionResponse?.authRequired;
+  elements.connection.textContent = connected
+    ? "JDownloader 2 is connected"
+    : myjdNeedsSignIn ? "MyJDownloader sign-in required" : "JDownloader 2 is not reachable";
   elements.connection.className = `status ${connected ? "connected" : "disconnected"}`;
-  elements.connectionMode.textContent = connectionResponse?.remote ? "Remote connection" : "Local connection";
+  if (connectionResponse?.mode === "myjd") {
+    elements.connectionMode.textContent = connectionResponse.deviceName
+      ? `MyJDownloader · ${connectionResponse.deviceName}`
+      : "MyJDownloader";
+  } else {
+    elements.connectionMode.textContent = connectionResponse?.remote ? "Direct server" : "Local connection";
+  }
 }
 
 elements.sendBest.addEventListener("click", () => send({ type: "JDVG_SEND_BEST" }));

@@ -1,6 +1,7 @@
 "use strict";
 
 const Detector = globalThis.JDDetector;
+const MyJDownloader = globalThis.JDMyJDownloader;
 
 const DEFAULT_SETTINGS = Object.freeze({
   enabled: true,
@@ -15,19 +16,27 @@ const DEFAULT_SETTINGS = Object.freeze({
   overlayTheme: "blue",
   overlaySize: "normal",
   overlayDesign: "classic",
+  connectionMode: "local",
   allowRemoteJDownloader: false,
-  jdEndpoint: "http://127.0.0.1:9666"
+  jdEndpoint: "http://127.0.0.1:9666",
+  myjdEmail: "",
+  myjdDeviceId: "",
+  myjdDeviceName: ""
 });
 
 const SETTINGS_KEY = "settings";
 const STATE_KEY = "jdvgTabStates";
+const MYJD_SESSION_KEY = "jdvgMyJDownloaderSession";
 const tabStates = new Map();
 const expandedHlsUrls = new Set();
 const stateArea = browser.storage.session || browser.storage.local;
+const myjdSessionArea = browser.storage.session || null;
+const myjdClient = new MyJDownloader.Client();
 let settingsCache = null;
 let saveTimer = null;
 
 const stateReady = restoreState();
+const myjdSessionReady = restoreMyJDownloaderSession();
 
 async function restoreState() {
   try {
@@ -43,6 +52,23 @@ async function restoreState() {
   } catch (_error) {
     // Session persistence improves event-page reliability but is not required.
   }
+}
+
+async function restoreMyJDownloaderSession() {
+  if (!myjdSessionArea) return;
+  try {
+    const stored = await myjdSessionArea.get(MYJD_SESSION_KEY);
+    if (stored[MYJD_SESSION_KEY]) myjdClient.restoreSession(stored[MYJD_SESSION_KEY]);
+  } catch (_error) {
+    // MyJDownloader sessions are optional and are never copied to local storage.
+  }
+}
+
+async function saveMyJDownloaderSession() {
+  if (!myjdSessionArea) return;
+  const session = myjdClient.exportSession();
+  if (session) await myjdSessionArea.set({ [MYJD_SESSION_KEY]: session });
+  else if (typeof myjdSessionArea.remove === "function") await myjdSessionArea.remove(MYJD_SESSION_KEY);
 }
 
 function scheduleStateSave() {
@@ -112,10 +138,14 @@ function sanitizeSettings(input, strictEndpoint = false) {
   const sizes = new Set(["compact", "normal", "large"]);
   const designs = new Set(["classic", "flat", "pill"]);
   const size = Number.parseInt(candidate.minimumFileSizeKB, 10);
-  const allowRemoteJDownloader = candidate.allowRemoteJDownloader === true;
+  const connectionModes = new Set(["local", "direct", "myjd"]);
+  const legacyMode = candidate.allowRemoteJDownloader === true ? "direct" : "local";
+  const connectionMode = connectionModes.has(candidate.connectionMode) ? candidate.connectionMode : legacyMode;
+  const allowRemoteJDownloader = connectionMode === "direct";
   let jdEndpoint;
   try {
-    jdEndpoint = normalizedEndpoint(candidate.jdEndpoint, allowRemoteJDownloader);
+    const endpointValue = connectionMode === "local" ? DEFAULT_SETTINGS.jdEndpoint : candidate.jdEndpoint;
+    jdEndpoint = normalizedEndpoint(endpointValue, connectionMode !== "local");
   } catch (error) {
     if (strictEndpoint) throw error;
     jdEndpoint = DEFAULT_SETTINGS.jdEndpoint;
@@ -133,8 +163,12 @@ function sanitizeSettings(input, strictEndpoint = false) {
     overlayTheme: themes.has(candidate.overlayTheme) ? candidate.overlayTheme : "blue",
     overlaySize: sizes.has(candidate.overlaySize) ? candidate.overlaySize : "normal",
     overlayDesign: designs.has(candidate.overlayDesign) ? candidate.overlayDesign : "classic",
+    connectionMode,
     allowRemoteJDownloader,
-    jdEndpoint
+    jdEndpoint,
+    myjdEmail: String(candidate.myjdEmail || "").trim().toLowerCase().slice(0, 254),
+    myjdDeviceId: String(candidate.myjdDeviceId || "").trim().slice(0, 256),
+    myjdDeviceName: String(candidate.myjdDeviceName || "").trim().slice(0, 256)
   };
 }
 
@@ -372,7 +406,14 @@ async function publicState(tabId) {
     candidates,
     count: candidates.length,
     mediaElements: state.mediaElements,
-    settings,
+    settings: {
+      enabled: settings.enabled,
+      showOverlay: settings.showOverlay,
+      overlayPosition: settings.overlayPosition,
+      overlayTheme: settings.overlayTheme,
+      overlaySize: settings.overlaySize,
+      overlayDesign: settings.overlayDesign
+    },
     pagePreferred: Detector.prefersPage(state.pageUrl)
   };
 }
@@ -423,6 +464,45 @@ function addFilenameHint(url, title, target, settings) {
 
 async function checkJDownloader(settingsOverride) {
   const settings = settingsOverride || await getSettings();
+  if (settings.connectionMode === "myjd") {
+    await myjdSessionReady;
+    if (!myjdClient.hasSession()) {
+      return {
+        connected: false,
+        mode: "myjd",
+        remote: true,
+        authRequired: true,
+        deviceName: settings.myjdDeviceName,
+        error: "Open Settings and sign in to MyJDownloader."
+      };
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 7000);
+    try {
+      const devices = await myjdClient.listDevices({ signal: controller.signal });
+      const selected = devices.find((device) => String(device.id) === settings.myjdDeviceId);
+      return {
+        connected: Boolean(selected),
+        mode: "myjd",
+        remote: true,
+        deviceName: selected?.name || settings.myjdDeviceName,
+        devices,
+        error: selected ? "" : "The selected MyJDownloader device is offline or unavailable."
+      };
+    } catch (error) {
+      return {
+        connected: false,
+        mode: "myjd",
+        remote: true,
+        deviceName: settings.myjdDeviceName,
+        error: error.name === "AbortError" ? "MyJDownloader did not respond in time." : error.message
+      };
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
   const endpoint = cleanEndpoint(settings.jdEndpoint, settings.allowRemoteJDownloader);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), settings.allowRemoteJDownloader ? 5000 : 2200);
@@ -436,13 +516,15 @@ async function checkJDownloader(settingsOverride) {
     return {
       connected: response.ok && /jdownloader\s*=\s*true|jdownloader/i.test(text),
       endpoint,
-      remote: settings.allowRemoteJDownloader === true
+      remote: settings.allowRemoteJDownloader === true,
+      mode: settings.connectionMode
     };
   } catch (error) {
     return {
       connected: false,
       endpoint,
       remote: settings.allowRemoteJDownloader === true,
+      mode: settings.connectionMode,
       error: error.name === "AbortError" ? "Connection timed out" : error.message
     };
   } finally {
@@ -454,6 +536,32 @@ async function sendToJDownloader({ urls, pageUrl, title }) {
   const settings = await getSettings();
   const cleanedUrls = [...new Set((urls || []).map(outgoingUrl).filter(Boolean))];
   if (!cleanedUrls.length) throw new Error("No usable video URL was found.");
+
+  if (settings.connectionMode === "myjd") {
+    await myjdSessionReady;
+    if (!myjdClient.hasSession()) {
+      throw new Error("Open Settings and sign in to MyJDownloader first.");
+    }
+    if (!settings.myjdDeviceId) {
+      throw new Error("Select a MyJDownloader device in Settings.");
+    }
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    try {
+      const response = await myjdClient.addLinks(settings.myjdDeviceId, {
+        urls: cleanedUrls,
+        pageUrl,
+        packageName: cleanPackageName(title),
+        autostart: settings.autoStart
+      }, { signal: controller.signal });
+      return { ok: true, response, mode: "myjd", deviceName: settings.myjdDeviceName };
+    } catch (error) {
+      if (error.name === "AbortError") throw new Error("MyJDownloader did not respond in time.");
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
 
   const endpoint = cleanEndpoint(settings.jdEndpoint, settings.allowRemoteJDownloader);
   const params = new URLSearchParams();
@@ -514,6 +622,84 @@ async function sendBest(tabId) {
   const url = addFilenameHint(target.url, state.title, target, settings);
   const result = await sendToJDownloader({ urls: [url], pageUrl: state.pageUrl, title: state.title });
   return { ...result, target };
+}
+
+function publicMyJDownloaderDevice(device) {
+  return {
+    id: String(device?.id || ""),
+    name: String(device?.name || device?.id || "Unnamed JDownloader"),
+    type: String(device?.type || "")
+  };
+}
+
+async function connectMyJDownloader(email, password) {
+  await myjdSessionReady;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  try {
+    await myjdClient.connect(email, password, { signal: controller.signal });
+    const devices = (await myjdClient.listDevices({ signal: controller.signal })).map(publicMyJDownloaderDevice);
+    await saveMyJDownloaderSession();
+
+    const current = await getSettings();
+    const selected = devices.find((device) => device.id === current.myjdDeviceId) || devices[0] || null;
+    const settings = sanitizeSettings({
+      ...current,
+      connectionMode: "myjd",
+      myjdEmail: String(email || "").trim().toLowerCase(),
+      myjdDeviceId: selected?.id || "",
+      myjdDeviceName: selected?.name || ""
+    }, true);
+    await browser.storage.local.set({ [SETTINGS_KEY]: settings });
+    settingsCache = settings;
+    return { connected: true, devices, settings };
+  } catch (error) {
+    myjdClient.clearSession();
+    await saveMyJDownloaderSession();
+    if (error.name === "AbortError") throw new Error("MyJDownloader did not respond in time.");
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function myJDownloaderStatus() {
+  await myjdSessionReady;
+  const settings = await getSettings();
+  if (!myjdClient.hasSession()) {
+    return { connected: false, devices: [], settings };
+  }
+  const devices = (await myjdClient.listDevices()).map(publicMyJDownloaderDevice);
+  return { connected: true, devices, settings };
+}
+
+async function selectMyJDownloaderDevice(deviceId) {
+  await myjdSessionReady;
+  if (!myjdClient.hasSession()) throw new Error("Sign in to MyJDownloader before selecting a device.");
+  const devices = (await myjdClient.listDevices()).map(publicMyJDownloaderDevice);
+  const selected = devices.find((device) => device.id === String(deviceId || ""));
+  if (!selected) throw new Error("That MyJDownloader device is offline or unavailable.");
+  const current = await getSettings();
+  const settings = sanitizeSettings({
+    ...current,
+    connectionMode: "myjd",
+    myjdDeviceId: selected.id,
+    myjdDeviceName: selected.name
+  }, true);
+  await browser.storage.local.set({ [SETTINGS_KEY]: settings });
+  settingsCache = settings;
+  return { devices, settings };
+}
+
+async function disconnectMyJDownloader() {
+  await myjdSessionReady;
+  myjdClient.clearSession();
+  await saveMyJDownloaderSession();
+  const current = await getSettings();
+  const settings = sanitizeSettings({ ...current, myjdDeviceId: "", myjdDeviceName: "" }, true);
+  await browser.storage.local.set({ [SETTINGS_KEY]: settings });
+  settingsCache = settings;
+  return { settings };
 }
 
 browser.webRequest.onHeadersReceived.addListener(
@@ -603,6 +789,14 @@ browser.runtime.onMessage.addListener((message, sender) => {
       }
       case "JDVG_CHECK_JD":
         return { ok: true, ...(await checkJDownloader()) };
+      case "JDVG_MYJD_CONNECT":
+        return { ok: true, ...(await connectMyJDownloader(message.email, message.password)) };
+      case "JDVG_MYJD_STATUS":
+        return { ok: true, ...(await myJDownloaderStatus()) };
+      case "JDVG_MYJD_SELECT_DEVICE":
+        return { ok: true, ...(await selectMyJDownloaderDevice(message.deviceId)) };
+      case "JDVG_MYJD_DISCONNECT":
+        return { ok: true, ...(await disconnectMyJDownloader()) };
       case "JDVG_SEND_BEST":
         if (!Number.isInteger(tabId)) throw new Error("No active browser tab was found.");
         return await sendBest(tabId);
