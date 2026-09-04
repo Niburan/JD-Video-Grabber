@@ -1,0 +1,42 @@
+name: Publish v1.0.4
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/release-v1.0.4
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Package browser builds
+        run: |
+          (cd firefox && zip -qr ../jd-video-grabber-1.0.4.zip .)
+          (cd chromium && zip -qr ../jd-video-grabber-chrome-brave-1.0.4.zip .)
+
+      - name: Create or update GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view v1.0.4 >/dev/null 2>&1; then
+            gh release upload v1.0.4 \
+              jd-video-grabber-1.0.4.zip \
+              jd-video-grabber-chrome-brave-1.0.4.zip \
+              --clobber
+          else
+            gh release create v1.0.4 \
+              jd-video-grabber-1.0.4.zip \
+              jd-video-grabber-chrome-brave-1.0.4.zip \
+              --target "$GITHUB_SHA" \
+              --title "JD Video Grabber v1.0.4" \
+              --notes-file CHANGELOG.md
+          fi

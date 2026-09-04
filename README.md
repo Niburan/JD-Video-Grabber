@@ -21,6 +21,20 @@ Download the current packages from the [v1.0.4 release](https://github.com/Nibur
 
 JDownloader 2 must be running. Its Click'n'Load service normally listens at `http://127.0.0.1:9666`.
 
+## Screenshots
+
+### In-video download bar
+
+![JD Video Grabber download bar over a video](screenshots/video-download-bar.png)
+
+### Extension toolbar panel
+
+![JD Video Grabber toolbar panel](screenshots/toolbar-panel.png)
+
+### Settings and appearance customization
+
+![JD Video Grabber settings page](screenshots/settings.png)
+
 ## Repository layout
 
 - [`firefox/`](firefox/) — exact extracted Firefox v1.0.4 package source

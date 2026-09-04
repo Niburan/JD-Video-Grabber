@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JD Video Grabber Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <main>
+    <header>
+      <img src="../icons/icon.svg" alt="" width="52" height="52">
+      <div>
+        <h1>JD Video Grabber</h1>
+        <p>Firefox video detection and JDownloader 2 handoff</p>
+      </div>
+    </header>
+
+    <form id="settings-form">
+      <section>
+        <h2>Detection and overlay</h2>
+        <label class="check"><input id="enabled" type="checkbox"> Enable video detection</label>
+        <label class="check"><input id="showOverlay" type="checkbox"> Show the download bar over videos</label>
+        <label class="check"><input id="showAudio" type="checkbox"> Include audio-only sources</label>
+        <label class="check"><input id="showUnconfirmedSources" type="checkbox"> Show unconfirmed page-source alternatives</label>
+        <p class="help">Leave this off to hide duplicate player URLs when a matching network-confirmed CDN link has been detected.</p>
+
+        <label for="minimumFileSizeKB">Ignore small direct media responses below</label>
+        <div class="inline"><input id="minimumFileSizeKB" type="number" min="0" max="102400" step="128"><span>KB</span></div>
+
+        <label for="overlayPosition">Download bar position</label>
+        <select id="overlayPosition">
+          <option value="top-right">Top right</option>
+          <option value="top-left">Top left</option>
+        </select>
+      </section>
+
+      <section>
+        <h2>Video download bar appearance</h2>
+        <div id="bar-preview" class="bar-preview" data-theme="blue" data-size="normal" data-design="classic">
+          <div class="preview-button"><span class="preview-icon">↓</span><span>Download this video</span></div>
+          <div class="preview-toggle">▼</div>
+        </div>
+
+        <div class="appearance-grid">
+          <div>
+            <label for="overlayTheme">Color theme</label>
+            <select id="overlayTheme">
+              <option value="blue">IDM blue</option>
+              <option value="dark">Graphite dark</option>
+              <option value="green">JDownloader green</option>
+              <option value="red">Ruby red</option>
+              <option value="orange">Burnt orange</option>
+              <option value="purple">Royal purple</option>
+              <option value="light">Silver light</option>
+            </select>
+          </div>
+          <div>
+            <label for="overlaySize">Bar size</label>
+            <select id="overlaySize">
+              <option value="compact">Compact</option>
+              <option value="normal">Normal</option>
+              <option value="large">Large</option>
+            </select>
+          </div>
+          <div>
+            <label for="overlayDesign">Bar design</label>
+            <select id="overlayDesign">
+              <option value="classic">Classic gradient</option>
+              <option value="flat">Flat</option>
+              <option value="pill">Rounded pill</option>
+            </select>
+          </div>
+        </div>
+        <p class="help">The preview updates immediately. Click Save settings to apply it to video pages.</p>
+      </section>
+
+      <section>
+        <h2>JDownloader behavior</h2>
+        <label for="mainAction">Main download button</label>
+        <select id="mainAction">
+          <option value="smart">Smart choice (recommended)</option>
+          <option value="stream">Best detected stream</option>
+          <option value="page">Always analyze the page</option>
+        </select>
+        <p class="help">Smart choice uses the direct stream on ordinary sites and the page URL where JDownloader’s site extractor is usually more reliable.</p>
+
+        <label class="check"><input id="autoStart" type="checkbox"> Start downloads immediately instead of using LinkGrabber</label>
+        <label class="check"><input id="usePageTitleFilename" type="checkbox"> Add the page title as a filename hint</label>
+        <p class="help">The filename hint requires the one-time JDownloader Packagizer rule described in the included README. Package names use the page title even without that rule.</p>
+
+        <label for="jdEndpoint">Local JDownloader address</label>
+        <input id="jdEndpoint" type="url" spellcheck="false">
+        <p class="help">For safety, this build accepts only <code>127.0.0.1:9666</code> or <code>localhost:9666</code>.</p>
+        <button id="test-connection" class="secondary" type="button">Test JDownloader connection</button>
+        <p id="connection-result" class="result" role="status"></p>
+      </section>
+
+      <div class="actions">
+        <button class="primary" type="submit">Save settings</button>
+        <span id="save-result" class="result" role="status"></span>
+      </div>
+    </form>
+
+    <aside>
+      <strong>Important:</strong> Protected DRM video cannot be downloaded by this extension or JDownloader. For ordinary video, start playback if no stream appears immediately.
+    </aside>
+  </main>
+  <script src="../lib/chromium-api.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>

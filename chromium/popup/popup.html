@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JD Video Grabber</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <div class="identity">
+      <img src="../icons/icon.svg" alt="" width="32" height="32">
+      <div>
+        <h1>JD Video Grabber</h1>
+        <p id="connection" class="status checking">Checking JDownloader…</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button id="gear-settings" class="icon-button" type="button" aria-label="Open appearance and extension settings" title="Settings">⚙</button>
+      <button id="close-popup" class="icon-button close-button" type="button" aria-label="Close popup" title="Close">×</button>
+    </div>
+  </header>
+
+  <main>
+    <button id="send-best" class="primary" type="button">Send best match to JDownloader</button>
+    <div class="section-title">
+      <span id="count">Detected sources</span>
+      <button id="clear" class="text-button" type="button">Clear</button>
+    </div>
+    <div id="sources" class="sources" aria-live="polite"></div>
+    <button id="send-page" class="secondary" type="button">Let JDownloader analyze this page</button>
+    <p id="message" class="message" role="status"></p>
+  </main>
+
+  <footer>
+    <span>JD Video Grabber</span>
+    <span>Local connection only</span>
+  </footer>
+  <script src="../lib/chromium-api.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
