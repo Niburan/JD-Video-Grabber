@@ -14,12 +14,22 @@ JD Video Grabber detects video streams in Firefox, Chrome, and Brave, places a c
 
 ## Download
 
-Download the current packages from the [v1.0.4 release](https://github.com/Niburan/JD-Video-Grabber/releases/tag/v1.0.4).
+The current stable local-only packages are available from the [v1.0.4 release](https://github.com/Niburan/JD-Video-Grabber/releases/tag/v1.0.4).
 
 - **Firefox:** `jd-video-grabber-1.0.4.zip` is the Mozilla submission/source package. Permanent installation in standard Firefox requires a Mozilla-signed XPI.
 - **Chrome and Brave:** extract `jd-video-grabber-chrome-brave-1.0.4.zip`, enable Developer mode at `chrome://extensions` or `brave://extensions`, choose **Load unpacked**, and select the extracted folder.
 
+### Remote Server Access beta
+
+[v1.1.0-beta.1](https://github.com/Niburan/JD-Video-Grabber/releases/tag/v1.1.0-beta.1) adds optional connections to JDownloader running on another computer. It accepts LAN, VPN, WAN, or public IP addresses and hostnames. Remote access is disabled by default.
+
+This is a prerelease intended for testing with real server configurations. It is **not Mozilla-signed**. Firefox testers can load the clearly labeled `UNSIGNED.xpi` temporarily through `about:debugging`, or extract the Firefox ZIP and select its `manifest.json`. Chrome and Brave testers should extract their ZIP and use **Load unpacked**.
+
 JDownloader 2 must be running. Its Click'n'Load service normally listens at `http://127.0.0.1:9666`.
+
+For remote testing, open Settings, enable **Connect to JDownloader on another computer**, enter the server address, and select **Test JDownloader connection**. Examples include `192.168.1.50:9666`, `100.80.20.10:9666`, or `https://downloads.example.com`.
+
+The server must expose Click'n'Load and permit the connection through its firewall. A VPN or HTTPS is safer than exposing port 9666 directly to the public internet. Public HTTP sends submitted video URLs without transport encryption.
 
 ## Screenshots
 
@@ -37,8 +47,8 @@ JDownloader 2 must be running. Its Click'n'Load service normally listens at `htt
 
 ## Repository layout
 
-- [`firefox/`](firefox/) — exact extracted Firefox v1.0.4 package source
-- [`chromium/`](chromium/) — exact extracted Chrome/Brave v1.0.4 package source
+- [`firefox/`](firefox/) — exact extracted Firefox v1.1.0 beta package source
+- [`chromium/`](chromium/) — exact extracted Chrome/Brave v1.1.0 beta package source
 
 Each browser folder contains its own manifest and browser-specific runtime files. The two builds intentionally share functionality and appearance without requiring identical browser startup code.
 
@@ -49,7 +59,7 @@ Each browser folder contains its own manifest and browser-specific runtime files
 - Some authenticated streams require cookies or request headers that Click'n'Load cannot transfer.
 - JDownloader must support the selected site or media format.
 
-Only URLs explicitly selected by the user are sent, and only to the locally configured JDownloader endpoint. The extension contains no analytics or remote service.
+Only URLs explicitly selected by the user are sent, and only to the user-configured JDownloader endpoint. Remote access is disabled by default. The extension contains no analytics or developer-operated remote service.
 
 JD Video Grabber is an unofficial companion extension and is not affiliated with JDownloader, Internet Download Manager, Mozilla, Google, or Brave.
 

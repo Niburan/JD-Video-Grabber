@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.1.0-beta.1
+
+- Added opt-in remote JDownloader server access
+- Accepts LAN, VPN, WAN, and public IP addresses or hostnames
+- Normalizes bare addresses such as `192.168.1.50:9666`
+- Supports HTTP, HTTPS, custom ports, and reverse-proxy paths
+- Keeps localhost as the default and shows remote-mode safety guidance
+- Displays Local connection or Remote connection in the toolbar panel
+
 ## v1.0.4
 
 Initial public GitHub release.

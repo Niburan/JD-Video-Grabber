@@ -12,7 +12,7 @@
       <img src="../icons/icon.svg" alt="" width="52" height="52">
       <div>
         <h1>JD Video Grabber</h1>
-        <p>Firefox video detection and JDownloader 2 handoff</p>
+        <p>Browser video detection and JDownloader 2 handoff</p>
       </div>
     </header>
 
@@ -89,9 +89,12 @@
         <label class="check"><input id="usePageTitleFilename" type="checkbox"> Add the page title as a filename hint</label>
         <p class="help">The filename hint requires the one-time JDownloader Packagizer rule described in the included README. Package names use the page title even without that rule.</p>
 
-        <label for="jdEndpoint">Local JDownloader address</label>
-        <input id="jdEndpoint" type="url" spellcheck="false">
-        <p class="help">For safety, this build accepts only <code>127.0.0.1:9666</code> or <code>localhost:9666</code>.</p>
+        <label class="check"><input id="allowRemoteJDownloader" type="checkbox"> Connect to JDownloader on another computer</label>
+        <p class="help warning">Only enable remote access for a JDownloader server you trust. Public HTTP connections expose submitted video URLs unencrypted.</p>
+
+        <label for="jdEndpoint">JDownloader address</label>
+        <input id="jdEndpoint" type="text" spellcheck="false" placeholder="127.0.0.1:9666">
+        <p id="endpoint-help" class="help">Local mode accepts only <code>127.0.0.1:9666</code> or <code>localhost:9666</code>.</p>
         <button id="test-connection" class="secondary" type="button">Test JDownloader connection</button>
         <p id="connection-result" class="result" role="status"></p>
       </section>

@@ -51,6 +51,15 @@ Temporary extensions remain installed until Firefox restarts. A permanently inst
 
 JDownloader normally exposes Click'n'Load at `http://127.0.0.1:9666`. Open the extension toolbar panel or its Settings page and use **Test JDownloader connection**.
 
+To use JDownloader on another computer, enable **Connect to JDownloader on another computer** and enter its address. The field accepts LAN, VPN, WAN, or public IP addresses and hostnames, with or without the `http://` prefix. Examples:
+
+- `192.168.1.50:9666`
+- `100.80.20.10:9666`
+- `http://203.0.113.50:9666`
+- `https://downloads.example.com`
+
+The remote computer must expose its Click'n'Load service at that address and allow the connection through its firewall. Remote mode is deliberately opt-in. Avoid exposing port 9666 directly to the public internet; a VPN or an authenticated HTTPS reverse proxy is safer. Public HTTP sends the submitted video URLs without transport encryption.
+
 When the first link is sent, JDownloader may ask whether to allow an external application to add links. Accept that prompt. By default, links go to **LinkGrabber**. Settings can instead start them immediately.
 
 ## How the main button chooses
@@ -77,7 +86,7 @@ This is the anchor-based filename rule documented by JDownloader. It affects onl
 - Players inside a closed Shadow DOM may be detected by network activity but may not allow a bar to be positioned directly over the hidden `<video>` element. The toolbar panel still lists the stream.
 - JDownloader must support the site or media format it receives.
 
-Only URLs selected by the user are sent, and only to the locally configured JDownloader endpoint. The extension contains no analytics or remote service.
+Only URLs selected by the user are sent, and only to the user-configured JDownloader endpoint. Remote access is disabled by default. The extension contains no analytics or developer-operated remote service.
 
 ## Developer commands
 
@@ -86,4 +95,4 @@ npm test
 npm run build
 ```
 
-The build command creates `dist/jd-video-grabber-1.0.4.zip` and an identical unsigned `.xpi` for temporary installation/testing.
+The build command creates `dist/jd-video-grabber-1.1.0.zip` and an identical unsigned `.xpi` for temporary installation/testing.

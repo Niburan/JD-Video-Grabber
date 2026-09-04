@@ -15,6 +15,7 @@ const DEFAULT_SETTINGS = Object.freeze({
   overlayTheme: "blue",
   overlaySize: "normal",
   overlayDesign: "classic",
+  allowRemoteJDownloader: false,
   jdEndpoint: "http://127.0.0.1:9666"
 });
 
@@ -60,24 +61,50 @@ function scheduleStateSave() {
 async function getSettings() {
   if (settingsCache) return settingsCache;
   const stored = await browser.storage.local.get(SETTINGS_KEY);
-  settingsCache = { ...DEFAULT_SETTINGS, ...(stored[SETTINGS_KEY] || {}) };
+  settingsCache = sanitizeSettings(stored[SETTINGS_KEY] || {});
   return settingsCache;
 }
 
-function cleanEndpoint(value) {
+function normalizedEndpoint(value, allowRemote) {
+  let raw = String(value || DEFAULT_SETTINGS.jdEndpoint).trim();
+  if (!/^[a-z][a-z\d+.-]*:\/\//i.test(raw)) raw = `http://${raw}`;
+
   try {
-    const parsed = new URL(String(value || DEFAULT_SETTINGS.jdEndpoint));
-    const localHost = parsed.hostname === "127.0.0.1" || parsed.hostname === "localhost";
-    if (parsed.protocol !== "http:" || !localHost || parsed.port !== "9666") {
-      return DEFAULT_SETTINGS.jdEndpoint;
+    const parsed = new URL(raw);
+    const hostname = parsed.hostname.toLowerCase();
+    const localHost = hostname === "127.0.0.1" || hostname === "localhost" || hostname === "[::1]";
+
+    if (!hostname || !["http:", "https:"].includes(parsed.protocol)) {
+      throw new Error("The JDownloader address must use HTTP or HTTPS.");
     }
-    return `${parsed.protocol}//${parsed.host}`;
+    if (parsed.username || parsed.password) {
+      throw new Error("Usernames and passwords cannot be placed in the JDownloader address.");
+    }
+    if (!allowRemote && (parsed.protocol !== "http:" || !localHost || parsed.port !== "9666")) {
+      throw new Error("Enable remote JDownloader access to use an address other than localhost:9666.");
+    }
+
+    parsed.search = "";
+    parsed.hash = "";
+    const path = parsed.pathname.replace(/\/+$/, "");
+    return `${parsed.protocol}//${parsed.host}${path === "/" ? "" : path}`;
+  } catch (error) {
+    if (error instanceof Error && /JDownloader address|Usernames and passwords|Enable remote/.test(error.message)) {
+      throw error;
+    }
+    throw new Error("Enter a valid JDownloader IP address or URL.");
+  }
+}
+
+function cleanEndpoint(value, allowRemote = false) {
+  try {
+    return normalizedEndpoint(value, allowRemote);
   } catch (_error) {
     return DEFAULT_SETTINGS.jdEndpoint;
   }
 }
 
-function sanitizeSettings(input) {
+function sanitizeSettings(input, strictEndpoint = false) {
   const candidate = input || {};
   const mainActions = new Set(["smart", "stream", "page"]);
   const positions = new Set(["top-right", "top-left"]);
@@ -85,6 +112,14 @@ function sanitizeSettings(input) {
   const sizes = new Set(["compact", "normal", "large"]);
   const designs = new Set(["classic", "flat", "pill"]);
   const size = Number.parseInt(candidate.minimumFileSizeKB, 10);
+  const allowRemoteJDownloader = candidate.allowRemoteJDownloader === true;
+  let jdEndpoint;
+  try {
+    jdEndpoint = normalizedEndpoint(candidate.jdEndpoint, allowRemoteJDownloader);
+  } catch (error) {
+    if (strictEndpoint) throw error;
+    jdEndpoint = DEFAULT_SETTINGS.jdEndpoint;
+  }
   return {
     enabled: candidate.enabled !== false,
     showOverlay: candidate.showOverlay !== false,
@@ -98,7 +133,8 @@ function sanitizeSettings(input) {
     overlayTheme: themes.has(candidate.overlayTheme) ? candidate.overlayTheme : "blue",
     overlaySize: sizes.has(candidate.overlaySize) ? candidate.overlaySize : "normal",
     overlayDesign: designs.has(candidate.overlayDesign) ? candidate.overlayDesign : "classic",
-    jdEndpoint: cleanEndpoint(candidate.jdEndpoint)
+    allowRemoteJDownloader,
+    jdEndpoint
   };
 }
 
@@ -387,18 +423,28 @@ function addFilenameHint(url, title, target, settings) {
 
 async function checkJDownloader(settingsOverride) {
   const settings = settingsOverride || await getSettings();
+  const endpoint = cleanEndpoint(settings.jdEndpoint, settings.allowRemoteJDownloader);
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 2200);
+  const timeout = setTimeout(() => controller.abort(), settings.allowRemoteJDownloader ? 5000 : 2200);
   try {
-    const response = await fetch(`${cleanEndpoint(settings.jdEndpoint)}/jdcheck.js?_=${Date.now()}`, {
+    const response = await fetch(`${endpoint}/jdcheck.js?_=${Date.now()}`, {
       cache: "no-store",
       credentials: "omit",
       signal: controller.signal
     });
     const text = await response.text();
-    return { connected: response.ok && /jdownloader\s*=\s*true|jdownloader/i.test(text) };
+    return {
+      connected: response.ok && /jdownloader\s*=\s*true|jdownloader/i.test(text),
+      endpoint,
+      remote: settings.allowRemoteJDownloader === true
+    };
   } catch (error) {
-    return { connected: false, error: error.name === "AbortError" ? "Connection timed out" : error.message };
+    return {
+      connected: false,
+      endpoint,
+      remote: settings.allowRemoteJDownloader === true,
+      error: error.name === "AbortError" ? "Connection timed out" : error.message
+    };
   } finally {
     clearTimeout(timeout);
   }
@@ -409,7 +455,7 @@ async function sendToJDownloader({ urls, pageUrl, title }) {
   const cleanedUrls = [...new Set((urls || []).map(outgoingUrl).filter(Boolean))];
   if (!cleanedUrls.length) throw new Error("No usable video URL was found.");
 
-  const endpoint = cleanEndpoint(settings.jdEndpoint);
+  const endpoint = cleanEndpoint(settings.jdEndpoint, settings.allowRemoteJDownloader);
   const params = new URLSearchParams();
   params.set("urls", cleanedUrls.join("\r\n"));
   if (pageUrl) {
@@ -440,7 +486,7 @@ async function sendToJDownloader({ urls, pageUrl, title }) {
       throw new Error("JDownloader did not respond. Make sure JDownloader 2 is running.");
     }
     if (/fetch|network|connection/i.test(error.message)) {
-      throw new Error("Could not reach JDownloader 2 at 127.0.0.1:9666.");
+      throw new Error(`Could not reach JDownloader 2 at ${endpoint}.`);
     }
     throw error;
   } finally {
@@ -572,7 +618,7 @@ browser.runtime.onMessage.addListener((message, sender) => {
       case "JDVG_GET_SETTINGS":
         return { ok: true, settings: await getSettings() };
       case "JDVG_SAVE_SETTINGS": {
-        const settings = sanitizeSettings(message.settings);
+        const settings = sanitizeSettings(message.settings, true);
         await browser.storage.local.set({ [SETTINGS_KEY]: settings });
         settingsCache = settings;
         for (const existingTabId of tabStates.keys()) void publishState(existingTabId);

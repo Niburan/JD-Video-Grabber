@@ -12,6 +12,7 @@ const elements = {
   clear: document.querySelector("#clear"),
   settings: document.querySelector("#gear-settings"),
   close: document.querySelector("#close-popup"),
+  connectionMode: document.querySelector("#connection-mode"),
   message: document.querySelector("#message")
 };
 
@@ -92,6 +93,7 @@ async function initialize() {
   const connected = connectionResponse?.connected === true;
   elements.connection.textContent = connected ? "JDownloader 2 is connected" : "JDownloader 2 is not reachable";
   elements.connection.className = `status ${connected ? "connected" : "disconnected"}`;
+  elements.connectionMode.textContent = connectionResponse?.remote ? "Remote connection" : "Local connection";
 }
 
 elements.sendBest.addEventListener("click", () => send({ type: "JDVG_SEND_BEST" }));

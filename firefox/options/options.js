@@ -2,13 +2,16 @@
 
 const fields = [
   "enabled", "showOverlay", "showAudio", "showUnconfirmedSources", "minimumFileSizeKB", "overlayPosition",
-  "overlayTheme", "overlaySize", "overlayDesign", "mainAction", "autoStart", "usePageTitleFilename", "jdEndpoint"
+  "overlayTheme", "overlaySize", "overlayDesign", "mainAction", "autoStart", "usePageTitleFilename",
+  "allowRemoteJDownloader", "jdEndpoint"
 ];
 const form = document.querySelector("#settings-form");
 const saveResult = document.querySelector("#save-result");
 const testButton = document.querySelector("#test-connection");
 const connectionResult = document.querySelector("#connection-result");
 const preview = document.querySelector("#bar-preview");
+const remoteToggle = document.querySelector("#allowRemoteJDownloader");
+const endpointHelp = document.querySelector("#endpoint-help");
 
 function showResult(element, message, error = false) {
   element.textContent = message;
@@ -31,7 +34,23 @@ function populate(settings) {
     if (field.type === "checkbox") field.checked = settings[id] === true;
     else field.value = settings[id];
   }
+  updateEndpointHelp();
   updatePreview();
+}
+
+function updateEndpointHelp() {
+  endpointHelp.replaceChildren();
+  if (remoteToggle.checked) {
+    endpointHelp.textContent = "Accepts LAN, VPN, WAN, or public IP addresses and hostnames over HTTP or HTTPS. Include a port when your server requires one.";
+  } else {
+    endpointHelp.append("Local mode accepts only ");
+    const loopback = document.createElement("code");
+    loopback.textContent = "127.0.0.1:9666";
+    endpointHelp.append(loopback, " or ");
+    const localhost = document.createElement("code");
+    localhost.textContent = "localhost:9666";
+    endpointHelp.append(localhost, ".");
+  }
 }
 
 function updatePreview() {
@@ -43,6 +62,7 @@ function updatePreview() {
 for (const id of ["overlayTheme", "overlaySize", "overlayDesign"]) {
   document.querySelector(`#${id}`).addEventListener("change", updatePreview);
 }
+remoteToggle.addEventListener("change", updateEndpointHelp);
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -59,7 +79,13 @@ form.addEventListener("submit", async (event) => {
 testButton.addEventListener("click", async () => {
   testButton.disabled = true;
   showResult(connectionResult, "Checking…");
-  await browser.runtime.sendMessage({ type: "JDVG_SAVE_SETTINGS", settings: valuesFromForm() });
+  const saved = await browser.runtime.sendMessage({ type: "JDVG_SAVE_SETTINGS", settings: valuesFromForm() });
+  if (!saved?.ok) {
+    showResult(connectionResult, saved?.error || "Could not save the JDownloader address.", true);
+    testButton.disabled = false;
+    return;
+  }
+  populate(saved.settings);
   const response = await browser.runtime.sendMessage({ type: "JDVG_CHECK_JD" });
   showResult(
     connectionResult,
