@@ -31,7 +31,7 @@ const tabStates = new Map();
 const expandedHlsUrls = new Set();
 const stateArea = browser.storage.session || browser.storage.local;
 const myjdSessionArea = browser.storage.session || null;
-const myjdClient = new MyJDownloader.Client();
+const myjdClient = new MyJDownloader.Client({ onSessionChanged: saveMyJDownloaderSession });
 let settingsCache = null;
 let saveTimer = null;
 
@@ -133,7 +133,7 @@ function cleanEndpoint(value, allowRemote = false) {
 function sanitizeSettings(input, strictEndpoint = false) {
   const candidate = input || {};
   const mainActions = new Set(["smart", "stream", "page"]);
-  const positions = new Set(["top-right", "top-left"]);
+  const positions = new Set(["top-right", "top-left", "above-top-right", "above-top-left"]);
   const themes = new Set(["blue", "dark", "green", "red", "orange", "purple", "light"]);
   const sizes = new Set(["compact", "normal", "large"]);
   const designs = new Set(["classic", "flat", "pill"]);

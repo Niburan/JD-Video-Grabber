@@ -22,7 +22,7 @@ The current stable local-only packages are available from the [v1.0.4 release](h
 
 ### Server Access beta
 
-[v1.2.0-beta.1](https://github.com/Niburan/JD-Video-Grabber/releases/tag/v1.2.0-beta.1) adds two optional ways to reach JDownloader running on another computer:
+[v1.2.1-beta.1](https://github.com/Niburan/JD-Video-Grabber/releases/tag/v1.2.1-beta.1) includes automatic MyJDownloader session renewal and two optional ways to reach JDownloader running on another computer:
 
 - **Direct server address** accepts LAN, VPN, WAN, public IP addresses, hostnames, and HTTPS reverse proxies.
 - **MyJDownloader account** signs in through the official encrypted MyJDownloader API and sends to a selected device without opening an incoming port.
@@ -42,7 +42,13 @@ For MyJDownloader testing:
 3. Enter the account email and password and click **Sign in and find devices**.
 4. Select the target online device and test the connection.
 
-The password is used only to establish the encrypted session and is never saved in extension settings. Testers must sign in again after restarting the browser. MyJDownloader mode sends the selected video URL and page title through `https://api.jdownloader.org` to the chosen device.
+The password is used only to establish the encrypted session and is never saved in extension settings. Expired sessions automatically reconnect once when the MyJDownloader service rejects a session. Renewed tokens and the derived device key stay in extension session storage, including across background suspension. Testers must sign in again after restarting the browser or if renewal is rejected. **After upgrading from v1.2.0-beta.1, sign in once to enable renewal.** MyJDownloader mode sends the selected video URL and page title through `https://api.jdownloader.org` to the chosen device.
+
+Network timeouts and device errors are not automatically retried, because the device may already have accepted the download. If a response is lost, check LinkGrabber before sending the link again.
+
+### Place the download bar above the video
+
+In extension Settings, set **Download bar position** to **Above top-right** or **Above top-left**, then click **Save settings**. The bar sits four pixels above the video. If there is insufficient room above the player within the page or its iframe, it falls back inside the video. Existing Top right and Top left positions remain available.
 
 ## Screenshots
 
@@ -60,8 +66,8 @@ The password is used only to establish the encrypted session and is never saved 
 
 ## Repository layout
 
-- [`firefox/`](firefox/) — exact extracted Firefox v1.2.0 beta package source
-- [`chromium/`](chromium/) — exact extracted Chrome/Brave v1.2.0 beta package source
+- [`firefox/`](firefox/) — exact extracted Firefox v1.2.1 beta package source
+- [`chromium/`](chromium/) — exact extracted Chrome/Brave v1.2.1 beta package source
 
 Each browser folder contains its own manifest and browser-specific runtime files. The two builds intentionally share functionality and appearance without requiring identical browser startup code.
 

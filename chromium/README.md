@@ -4,7 +4,7 @@ This Chromium package provides the same video detection, IDM-inspired download b
 
 ## Install for testing
 
-1. Extract `jd-video-grabber-chrome-brave-1.2.0.zip` to a permanent folder.
+1. Extract `jd-video-grabber-chrome-brave-1.2.1.zip` to a permanent folder.
 2. Start JDownloader 2.
 3. Open `chrome://extensions` in Chrome or `brave://extensions` in Brave.
 4. Enable **Developer mode**.
@@ -33,3 +33,7 @@ For MyJDownloader, sign in to the same MyJDownloader account inside the remote J
 - Browser-extension service workers can be suspended between events; detected state is restored from extension session storage.
 - The extension contains no analytics or remote code.
 - MyJDownloader mode sends the account email and encrypted authentication messages to `https://api.jdownloader.org`, then sends the selected video URL and page title through that service to the chosen device. The password is not stored or sent directly.
+
+MyJDownloader sessions renew automatically after an explicit session rejection. Sign in once after upgrading from v1.2.0-beta.1. Session tokens and the derived device key stay in session storage and are discarded on browser restart or Forget session. Passwords are not saved. Network failures are not automatically retried; check LinkGrabber before resending.
+
+To place the download bar outside the video, select Above top-right or Above top-left in Settings and save. The bar sits four pixels above the video and falls back inside when there is insufficient space above it in the page or iframe.

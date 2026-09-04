@@ -32,7 +32,10 @@
         <select id="overlayPosition">
           <option value="top-right">Top right</option>
           <option value="top-left">Top left</option>
+          <option value="above-top-right">Above top-right</option>
+          <option value="above-top-left">Above top-left</option>
         </select>
+        <p class="help">Above positions place the bar just outside the video. If there is not enough room above it, the bar moves inside the video.</p>
       </section>
 
       <section>
@@ -113,7 +116,7 @@
           <input id="myjdEmail" type="email" autocomplete="username" spellcheck="false" placeholder="name@example.com">
           <label for="myjdPassword">MyJDownloader password</label>
           <input id="myjdPassword" type="password" autocomplete="current-password" placeholder="Password">
-          <p class="help warning">The password is used only to establish the encrypted session and is not saved in extension settings. Sign in again after restarting the browser.</p>
+          <p class="help warning">Your password is not saved. Expired sessions renew automatically while the browser stays open. Sign in again after restarting the browser, or if renewal is rejected.</p>
           <div class="button-row">
             <button id="myjd-connect" class="secondary" type="button">Sign in and find devices</button>
             <button id="myjd-disconnect" class="secondary" type="button">Forget session</button>

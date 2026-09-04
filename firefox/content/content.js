@@ -475,8 +475,13 @@
     const rect = media.getBoundingClientRect();
     const inset = 8;
     host.style.display = "block";
-    host.style.top = `${Math.max(inset, rect.top + inset)}px`;
-    if (currentState?.settings?.overlayPosition === "top-left") {
+    const position = currentState?.settings?.overlayPosition || "top-right";
+    const above = position.startsWith("above-");
+    // Measure after showing and applying appearance: compact/large bars differ
+    // in height. The absolute source menu does not affect the bar's height.
+    const aboveTop = above ? rect.top - bar.wrap.getBoundingClientRect().height - 4 : 0;
+    host.style.top = `${above && aboveTop >= inset ? aboveTop : Math.max(inset, rect.top + inset)}px`;
+    if (position.endsWith("top-left")) {
       host.style.left = `${Math.max(inset, rect.left + inset)}px`;
       host.style.right = "auto";
     } else {

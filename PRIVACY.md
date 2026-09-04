@@ -22,7 +22,7 @@ Data sent through MyJDownloader is also subject to the MyJDownloader/AppWork pri
 
 - Detection results are kept in memory or extension session storage and expire with the browser session.
 - Normal preferences, the direct-server address, the MyJDownloader email, and the chosen device identity are stored in extension-local settings until changed or the extension is removed.
-- MyJDownloader session tokens and derived encryption tokens are stored only in extension session storage. They are discarded when the browser session ends or when **Forget session** is selected.
+- MyJDownloader session tokens, derived encryption tokens, and the password-derived device key needed for renewal are stored only in extension session storage. These are sensitive authentication material, not the plaintext password. They are discarded when the browser session ends or when **Forget session** is selected. An expired session triggers a reconnect request to MyJDownloader using the saved renewal token.
 - The MyJDownloader password is not written to extension storage.
 
 ## User control

@@ -104,4 +104,8 @@ npm test
 npm run build
 ```
 
-The build command creates `dist/jd-video-grabber-1.2.0.zip` and an identical unsigned `.xpi` for temporary installation/testing.
+The build command creates `dist/jd-video-grabber-1.2.1.zip` and an identical unsigned `.xpi` for temporary installation/testing.
+
+MyJDownloader sessions renew automatically after an explicit session rejection. Sign in once after upgrading from v1.2.0-beta.1. Session tokens and the derived device key stay in session storage and are discarded on browser restart or Forget session. Passwords are not saved. Network failures are not automatically retried; check LinkGrabber before resending.
+
+To place the download bar outside the video, select Above top-right or Above top-left in Settings and save. The bar sits four pixels above the video and falls back inside when there is insufficient space above it in the page or iframe.

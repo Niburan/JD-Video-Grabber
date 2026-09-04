@@ -98,7 +98,12 @@
     if (type === "AUTH_FAILED") return new Error("MyJDownloader rejected the email or password.");
     if (type === "EMAIL_INVALID") return new Error("Enter a valid MyJDownloader email address.");
     if (type === "ERROR_EMAIL_NOT_CONFIRMED") return new Error("Confirm the MyJDownloader account email before signing in.");
-    if (type === "TOKEN_INVALID" || type === "SESSION") return new Error("The MyJDownloader session expired. Open Settings and sign in again.");
+    if (type === "TOKEN_INVALID" || type === "SESSION") {
+      const error = new Error("The MyJDownloader session could not be renewed. Open Settings and sign in again.");
+      error.type = type;
+      error.source = payload?.src || payload?.data?.src;
+      return error;
+    }
     if (type === "OFFLINE") return new Error("The selected JDownloader device is offline.");
     if (type === "TOO_MANY_REQUESTS") return new Error("MyJDownloader is receiving too many requests. Wait briefly and try again.");
     const detail = type || (typeof payload === "string" ? payload.slice(0, 160) : "");
@@ -110,6 +115,9 @@
       this.apiBase = options.apiBase || API_BASE;
       this.appKey = options.appKey || APP_KEY;
       this.rid = 0;
+      this.queue = Promise.resolve();
+      this.generation = 0;
+      this.onSessionChanged = options.onSessionChanged || (async () => {});
       this.clearSession();
     }
 
@@ -119,11 +127,13 @@
     }
 
     clearSession() {
+      this.generation += 1;
       this.email = "";
       this.sessionToken = "";
       this.regainToken = "";
       this.serverEncryptionToken = null;
       this.deviceEncryptionToken = null;
+      this.deviceSecret = null;
     }
 
     hasSession() {
@@ -140,6 +150,8 @@
       this.regainToken = String(session.regainToken || "");
       this.serverEncryptionToken = hexToBytes(session.serverEncryptionToken);
       this.deviceEncryptionToken = hexToBytes(session.deviceEncryptionToken);
+      this.deviceSecret = session.deviceSecret ? hexToBytes(session.deviceSecret) : null;
+      this.rid = Math.max(this.rid, Number.isSafeInteger(session.rid) ? session.rid : 0);
       return true;
     }
 
@@ -150,7 +162,9 @@
         sessionToken: this.sessionToken,
         regainToken: this.regainToken,
         serverEncryptionToken: bytesToHex(this.serverEncryptionToken),
-        deviceEncryptionToken: bytesToHex(this.deviceEncryptionToken)
+        deviceEncryptionToken: bytesToHex(this.deviceEncryptionToken),
+        deviceSecret: this.deviceSecret ? bytesToHex(this.deviceSecret) : null,
+        rid: this.rid
       };
     }
 
@@ -185,7 +199,62 @@
       return this.decodeResponse(response, key);
     }
 
-    async connect(email, password, options = {}) {
+    // Serialize authenticated operations: request IDs must increase on the wire,
+    // and rotating tokens must never overlap another request or a sign-out.
+    enqueue(operation) {
+      const generation = this.generation;
+      const pending = this.queue.then(async () => {
+        if (generation !== this.generation) throw new Error("MyJDownloader session changed. Try again.");
+        try {
+          const result = await operation(generation);
+          if (generation !== this.generation) throw new Error("MyJDownloader session changed. Try again.");
+          return result;
+        } finally {
+          // Failed requests consume IDs too. Preserve their high-water mark.
+          if (generation === this.generation) await this.onSessionChanged();
+        }
+      });
+      this.queue = pending.catch(() => {});
+      return pending;
+    }
+
+    async withSessionRecovery(operation, options, generation) {
+      try {
+        return await operation();
+      } catch (error) {
+        // Retry only an explicit rejection by the relay, never a timeout or a
+        // device error: the latter may follow a successfully accepted download.
+        if (!["TOKEN_INVALID", "SESSION"].includes(error.type) || error.source !== "MYJD" ||
+            generation !== this.generation || options.signal?.aborted) throw error;
+        await this.reconnect(options, generation);
+        return operation(); // One retry only; a second rejection reaches the UI.
+      }
+    }
+
+    async reconnect(options, generation) {
+      if (!this.regainToken || !this.deviceSecret) {
+        throw new Error("Sign in once in Settings to enable automatic MyJDownloader session renewal.");
+      }
+      const oldServerToken = this.serverEncryptionToken;
+      const path = `/my/reconnect?sessiontoken=${encodeURIComponent(this.sessionToken)}&regaintoken=${encodeURIComponent(this.regainToken)}`;
+      const result = await this.callServer(path, oldServerToken, options);
+      if (!result?.sessiontoken || !result?.regaintoken) throw new Error("MyJDownloader did not return a renewed session.");
+      const serverToken = await updateEncryptionToken(oldServerToken, result.sessiontoken);
+      const deviceToken = await updateEncryptionToken(this.deviceSecret, result.sessiontoken);
+      if (generation !== this.generation) throw new Error("MyJDownloader session was forgotten.");
+      this.sessionToken = result.sessiontoken;
+      this.regainToken = result.regaintoken;
+      this.serverEncryptionToken = serverToken;
+      this.deviceEncryptionToken = deviceToken;
+      // Persist before retrying, including when the retried request fails.
+      await this.onSessionChanged();
+    }
+
+    connect(email, password, options = {}) {
+      return this.enqueue((generation) => this.connectOnce(email, password, options, generation));
+    }
+
+    async connectOnce(email, password, options, generation) {
       const normalizedEmail = String(email || "").trim().toLowerCase();
       if (!normalizedEmail || !String(password || "")) {
         throw new Error("Enter the MyJDownloader email address and password.");
@@ -197,22 +266,34 @@
       const result = await this.callServer(path, loginSecret, options);
       if (!result?.sessiontoken) throw new Error("MyJDownloader did not return a session token.");
 
+      const serverToken = await updateEncryptionToken(loginSecret, result.sessiontoken);
+      const deviceToken = await updateEncryptionToken(deviceSecret, result.sessiontoken);
+      if (generation !== this.generation) throw new Error("MyJDownloader session was forgotten.");
       this.email = normalizedEmail;
       this.sessionToken = result.sessiontoken;
       this.regainToken = result.regaintoken || "";
-      this.serverEncryptionToken = await updateEncryptionToken(loginSecret, this.sessionToken);
-      this.deviceEncryptionToken = await updateEncryptionToken(deviceSecret, this.sessionToken);
+      this.serverEncryptionToken = serverToken;
+      this.deviceEncryptionToken = deviceToken;
+      this.deviceSecret = deviceSecret;
       return result;
     }
 
-    async listDevices(options = {}) {
+    listDevices(options = {}) {
+      return this.enqueue((generation) => this.withSessionRecovery(() => this.listDevicesOnce(options), options, generation));
+    }
+
+    async listDevicesOnce(options) {
       if (!this.hasSession()) throw new Error("Open Settings and sign in to MyJDownloader first.");
       const path = `/my/listdevices?sessiontoken=${encodeURIComponent(this.sessionToken)}`;
       const result = await this.callServer(path, this.serverEncryptionToken, options);
       return Array.isArray(result?.list) ? result.list : [];
     }
 
-    async callDevice(deviceId, action, params = [], options = {}) {
+    callDevice(deviceId, action, params = [], options = {}) {
+      return this.enqueue((generation) => this.withSessionRecovery(() => this.callDeviceOnce(deviceId, action, params, options), options, generation));
+    }
+
+    async callDeviceOnce(deviceId, action, params, options) {
       if (!this.hasSession()) throw new Error("Open Settings and sign in to MyJDownloader first.");
       if (!deviceId) throw new Error("Select a JDownloader device in Settings.");
       const request = {

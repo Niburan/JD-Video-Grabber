@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.2.1-beta.1
+
+- Added Above top-right and Above top-left video-bar positions with an inside fallback when there is insufficient room above the player
+- Automatically reconnects once after MyJDownloader explicitly rejects an expired session
+- Rotates and saves session keys before retrying the rejected operation
+- Serializes account requests and preserves request IDs across background suspension
+- Does not retry network failures or device errors that might duplicate downloads
+- Prevents an in-flight renewal from undoing Forget session
+- Requires one fresh sign-in after upgrading from the first MyJDownloader beta
+- Includes regression tests for renewal, suspension, concurrency, and retry safety
+- Firefox XPI remains unsigned by Mozilla; temporary installation only
+
 ## v1.2.0-beta.1
 
 - Added MyJDownloader as a third connection mode alongside Local and Direct server
